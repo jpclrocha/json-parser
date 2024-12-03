@@ -1,6 +1,6 @@
 # Exercicio usado como avaliacao para segunda nota na disciplina de LNPG
 
-## Equipe: João Pedro de Castro Laranjeira Rocha e Daniel do Carmo
+## Equipe: João Pedro de Castro Laranjeira Rocha e Daniel do Carmo Nascimento
 
 ## Linguagem Escolhida: Golang
 
