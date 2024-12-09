@@ -1,78 +1,129 @@
 package main
 
 import (
-	utils "json-parser/utils"
+	"fmt"
+	"regexp"
 )
 
 const (
-	COMMA        = ","
-	COLON        = ":"
-	LEFTBRACKET  = "["
-	RIGHTBRACKET = "]"
-	LEFTBRACE    = "{"
-	RIGHTBRACE   = "}"
-	QUOTE        = `"`
+	LEFT_BRACE    = "LEFT_BRACE"
+	RIGHT_BRACE   = "RIGHT_BRACE"
+	LEFT_BRACKET  = "LEFT_BRACKET"
+	RIGHT_BRACKET = "RIGHT_BRACKET"
+	COLON         = "COLON"
+	COMMA         = "COMMA"
+	STRING        = "STRING"
+	NUMBER        = "NUMBER"
+	TRUE          = "TRUE"
+	FALSE         = "FALSE"
+	NULL          = "NULL"
 )
 
-func Lexer(input string) (tokens_vals []string) {
-	whitespaceChars := []string{" ", "\t", "\b", "\n", "\r"}
-	syntaxChars := []string{COMMA, COLON, LEFTBRACKET, RIGHTBRACKET, LEFTBRACE, RIGHTBRACE, QUOTE}
-	tokens := []string{}
+type Token struct {
+	Type  string
+	Value *string
+}
 
-	for i := 0; i < len(input); i++ {
-		json_string, _ := utils.LexString(input)
-		if json_string != nil {
-			tokens = append(tokens, *json_string)
+func Lexer(input string) []Token {
+	currIndex := 0
+	tokens := []Token{}
+
+	for currIndex < len(input) {
+		char := string(input[currIndex])
+
+		switch char {
+		case "{":
+			tokens = append(tokens, createToken(LEFT_BRACE, nil))
+			currIndex++
 			continue
-		}
-
-		json_number, _ := utils.LexNumber(input)
-		if json_number != nil {
-			tokens = append(tokens, *json_number)
+		case "}":
+			tokens = append(tokens, createToken(RIGHT_BRACE, nil))
+			currIndex++
 			continue
-		}
-
-		json_float, _ := utils.LexFloat(input)
-		if json_float != nil {
-			tokens = append(tokens, *json_float)
+		case "[":
+			tokens = append(tokens, createToken(LEFT_BRACKET, nil))
+			currIndex++
 			continue
-		}
-
-		json_bool, _ := utils.LexBoolean(input)
-		if json_bool != nil {
-			tokens = append(tokens, *json_bool)
+		case "]":
+			tokens = append(tokens, createToken(RIGHT_BRACKET, nil))
+			currIndex++
 			continue
-		}
-
-		json_null, _ := utils.LexNull(input)
-		if json_null != nil {
-			tokens = append(tokens, *json_null)
+		case ":":
+			tokens = append(tokens, createToken(COLON, nil))
+			currIndex++
 			continue
-		}
+		case ",":
+			tokens = append(tokens, createToken(COMMA, nil))
+			currIndex++
+			continue
 
-		var errFlag *bool = nil
+		// TESTANDO TODAS AS POSSIBILIDADES DE SER VAZIO -> " ", \t, \n \r \f \v
+		case " ", "\t", "\n", "\r", "\f", "\v":
+			currIndex++
+			continue
+		case `"`:
+			value := ""
+			currIndex++
+			char := string(input[currIndex])
+			for char != `"` {
+				value += char
+				currIndex++
+				char = string(input[currIndex])
+			}
+			currIndex++
+			char = string(input[currIndex])
+			tokens = append(tokens, createToken(STRING, &value))
+			continue
 
-		for j := 0; j < len(whitespaceChars); j++ {
-			if string(input[0]) == whitespaceChars[j] {
-				input = input[1:]
-				err := false
-				errFlag = &err
+		case "t":
+			if string(input[currIndex+1]) == "r" && string(input[currIndex+2]) == "u" && string(input[currIndex+3]) == "e" {
+				tokens = append(tokens, createToken(TRUE, nil))
+				currIndex += 4
+				continue
+			}
+
+		case "f":
+			if string(input[currIndex+1]) == "a" && string(input[currIndex+2]) == "l" && string(input[currIndex+3]) == "s" && string(input[currIndex+4]) == "e" {
+				tokens = append(tokens, createToken(FALSE, nil))
+				currIndex += 5
+				continue
+			}
+
+		case "n":
+			if string(input[currIndex+1]) == "u" && string(input[currIndex+2]) == "l" && string(input[currIndex+3]) == "l" {
+				tokens = append(tokens, createToken(NULL, nil))
+				currIndex += 4
+				continue
 			}
 		}
 
-		for j := 0; j < len(syntaxChars); j++ {
-			if string(input[0]) == syntaxChars[j] {
-				tokens = append(tokens, string(input[0]))
-				input = input[1:]
-				err := false
-				errFlag = &err
+		if regexp.MustCompile("[0-9]").MatchString(char) {
+			value := ""
+
+			for {
+				fmt.Print(value)
+				fmt.Print(value)
+				if regexp.MustCompile("[0-9]").MatchString(char) {
+					value += char
+					currIndex++
+					char = string(input[currIndex])
+				}
+				break
 			}
+			tokens = append(tokens, createToken(NUMBER, &value))
+			continue
 		}
 
-		if errFlag == nil {
-			panic("Caracter nao esperado!")
-		}
+		panicString := fmt.Sprintf("Caracter invalido: %s", char)
+		panic(panicString)
 	}
 
 	return tokens
+}
+
+func createToken(tokenType string, value *string) Token {
+	return Token{
+		Type:  tokenType,
+		Value: value,
+	}
 }

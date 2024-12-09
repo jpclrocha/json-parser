@@ -6,15 +6,12 @@ import (
 )
 
 func main() {
-	dat, _ := os.ReadFile("./tests/step2/valid.json")
-	tokens := Lexer(string(dat))
-
-	if len(tokens) < 1 {
-		fmt.Print("JSON invalido! O programa recebeu um JSON vazio!")
+	input, err := os.ReadFile("./tests/step4/valid.json")
+	if err != nil {
+		panic(err)
 	}
-
-	for i := 0; i < len(tokens); i++ {
-		fmt.Printf("%s", tokens[i])
-	}
-	// Parse(tokens)
+	tokens := Lexer(string(input))
+	Parse(tokens)
+	fmt.Println("JSON valido!")
+	os.Exit(0)
 }

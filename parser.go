@@ -1,78 +1,151 @@
 package main
 
-import (
-	"fmt"
-	"reflect"
-)
-
-func parseArray(tokens []string) (json_arr []string, res_tokens []string) {
-	jsonArray := []string{}
-	firstToken := tokens[0]
-
-	if firstToken == RIGHTBRACKET {
-		return jsonArray, tokens[1:]
-	}
-
-	for {
-		_, json_array, _, tokens := Parse(tokens)
-		jsonArray = append(jsonArray, json_array...)
-
-		firstToken := tokens[0]
-		if firstToken == RIGHTBRACKET {
-			return jsonArray, tokens[1:]
-		} else if firstToken != COMMA {
-			panic("Expected comma after object in array")
-		} else {
-			tokens = tokens[1:]
-		}
-	}
+type Property struct {
+	Type  string
+	Key   any
+	Value any
 }
 
-func parseObject(tokens []string) (json_obj map[string]string, res_tokens []string) {
-	jsonObject := make(map[string]string)
-
-	firstToken := tokens[0]
-	if firstToken == RIGHTBRACE {
-		return jsonObject, tokens[1:]
-	}
-
-	for {
-		jsonKey := tokens[0]
-		if reflect.TypeOf(jsonKey).Elem().Kind() == reflect.String {
-			tokens = tokens[1:]
-		} else {
-			panic("Expected string key, got another else")
-		}
-
-		if tokens[0] != COLON {
-			panic("Expected colon after key in object, got another else")
-		}
-
-		json_value, _, _, tokens := Parse(tokens[1:])
-
-		jsonObject[jsonKey] = *json_value
-		firstToken = tokens[0]
-		fmt.Print(firstToken)
-		if firstToken == RIGHTBRACE {
-			return jsonObject, tokens[1:]
-		} else if firstToken != COMMA {
-			panic("Expected comma after pair in object")
-		}
-		tokens = tokens[1:]
-	}
+type Element struct {
+	Type  string
+	Value *any
+}
+type Expression struct {
+	Type       string
+	Properties *[]Property
+	Elements   *[]Element
+	Value      any
 }
 
-func Parse(tokens []string) (json_value *string, json_array []string, json_object map[string]string, tokens_return []string) {
-	firstToken := tokens[0]
+type Ast struct {
+	Type string
+	Body []Expression
+}
 
-	if firstToken == LEFTBRACKET {
-		json_arr, res_tokens := parseArray(tokens[1:])
-		return nil, json_arr, nil, res_tokens
-	} else if firstToken == LEFTBRACE {
-		json_object, res_tokens := parseObject(tokens[1:])
-		return nil, nil, json_object, res_tokens
-	} else {
-		return &firstToken, nil, nil, tokens[1:]
+func walk(currIndex int, tokens []Token) Expression {
+	token := tokens[currIndex]
+
+	if token.Type == LEFT_BRACE {
+		currIndex++
+		token = tokens[currIndex]
+
+		properties := []Property{}
+		node := Expression{
+			Type:       "Object",
+			Properties: &properties,
+		}
+
+		for token.Type != RIGHT_BRACE {
+			property := Property{
+				Type:  "Property",
+				Key:   token,
+				Value: nil,
+			}
+
+			currIndex++
+			token = tokens[currIndex]
+
+			property.Value = walk(currIndex, tokens)
+			*node.Properties = append(*node.Properties, property)
+
+			token = tokens[currIndex]
+			if token.Type == COMMA {
+				currIndex++
+				token = tokens[currIndex]
+			}
+		}
+		currIndex++
+		return node
+	}
+	if token.Type == RIGHT_BRACE {
+		currIndex++
+		properties := []Property{}
+		return Expression{
+			Type:       "Object",
+			Properties: &properties,
+		}
+	}
+	if token.Type == LEFT_BRACKET {
+		currIndex++
+		token = tokens[currIndex]
+
+		elements := []Element{}
+
+		node := Expression{
+			Type:     "Array",
+			Elements: &elements,
+		}
+
+		for token.Type != RIGHT_BRACKET {
+			*node.Elements = append(*node.Elements, *walk(currIndex, tokens).Elements...)
+			token = tokens[currIndex]
+
+			if token.Type == COMMA {
+				currIndex++
+				token = tokens[currIndex]
+			}
+		}
+		currIndex++
+		return node
+	}
+	if token.Type == STRING {
+		currIndex++
+		return Expression{
+			Type:  "String",
+			Value: token.Value,
+		}
+	}
+	if token.Type == NUMBER {
+		currIndex++
+		return Expression{
+			Type:  "Number",
+			Value: token.Value,
+		}
 	}
 
+	if token.Type == TRUE {
+		currIndex++
+		return Expression{
+			Type:  "Boolean",
+			Value: true,
+		}
+	}
+
+	if token.Type == FALSE {
+		currIndex++
+		return Expression{
+			Type:  "Boolean",
+			Value: false,
+		}
+	}
+
+	if token.Type == NULL {
+		currIndex++
+		return Expression{
+			Type:  "Null",
+			Value: nil,
+		}
+	}
+
+	panic(token.Type)
+}
+
+func Parse(tokens []Token) Ast {
+	if len(tokens) < 1 {
+		panic("JSON invalido! Tokens = 0")
+	}
+	currIndex := 0
+
+	body := []Expression{}
+	ast := Ast{
+		Type: "Program",
+		Body: body,
+	}
+
+	for currIndex < len(tokens) {
+		ast.Body = append(ast.Body, walk(currIndex, tokens))
+		currIndex++
+	}
+
+	return ast
 }
