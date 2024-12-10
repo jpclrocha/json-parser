@@ -71,7 +71,6 @@ func Lexer(input string) []Token {
 				char = string(input[currIndex])
 			}
 			currIndex++
-			char = string(input[currIndex])
 			tokens = append(tokens, createToken(STRING, &value))
 			continue
 
@@ -106,7 +105,6 @@ func Lexer(input string) []Token {
 				if regexp.MustCompile("[0-9]").MatchString(char) {
 					value += char
 					currIndex++
-					char = string(input[currIndex])
 				}
 				break
 			}

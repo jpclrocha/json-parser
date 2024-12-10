@@ -11,6 +11,7 @@ func main() {
 		panic(err)
 	}
 	tokens := Lexer(string(input))
+
 	Parse(tokens)
 	fmt.Println("JSON valido!")
 	os.Exit(0)

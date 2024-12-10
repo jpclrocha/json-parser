@@ -22,12 +22,13 @@ type Ast struct {
 	Body []Expression
 }
 
-func walk(currIndex int, tokens []Token) Expression {
-	token := tokens[currIndex]
+func walk(currIndex *int, tokens []Token) Expression {
+	token := tokens[*currIndex]
+	(*currIndex)++
 
 	if token.Type == LEFT_BRACE {
-		currIndex++
-		token = tokens[currIndex]
+		(*currIndex)++
+		token = tokens[*currIndex]
 
 		properties := []Property{}
 		node := Expression{
@@ -42,23 +43,23 @@ func walk(currIndex int, tokens []Token) Expression {
 				Value: nil,
 			}
 
-			currIndex++
-			token = tokens[currIndex]
+			(*currIndex)++
+			token = tokens[*currIndex]
 
 			property.Value = walk(currIndex, tokens)
 			*node.Properties = append(*node.Properties, property)
 
-			token = tokens[currIndex]
+			token = tokens[*currIndex]
 			if token.Type == COMMA {
-				currIndex++
-				token = tokens[currIndex]
+				(*currIndex)++
+				token = tokens[*currIndex]
 			}
 		}
-		currIndex++
+		(*currIndex)++
 		return node
 	}
 	if token.Type == RIGHT_BRACE {
-		currIndex++
+		(*currIndex)++
 		properties := []Property{}
 		return Expression{
 			Type:       "Object",
@@ -66,8 +67,8 @@ func walk(currIndex int, tokens []Token) Expression {
 		}
 	}
 	if token.Type == LEFT_BRACKET {
-		currIndex++
-		token = tokens[currIndex]
+		(*currIndex)++
+		token = tokens[*currIndex]
 
 		elements := []Element{}
 
@@ -78,25 +79,25 @@ func walk(currIndex int, tokens []Token) Expression {
 
 		for token.Type != RIGHT_BRACKET {
 			*node.Elements = append(*node.Elements, *walk(currIndex, tokens).Elements...)
-			token = tokens[currIndex]
+			token = tokens[*currIndex]
 
 			if token.Type == COMMA {
-				currIndex++
-				token = tokens[currIndex]
+				(*currIndex)++
+				token = tokens[*currIndex]
 			}
 		}
-		currIndex++
+		(*currIndex)++
 		return node
 	}
 	if token.Type == STRING {
-		currIndex++
+		(*currIndex)++
 		return Expression{
 			Type:  "String",
 			Value: token.Value,
 		}
 	}
 	if token.Type == NUMBER {
-		currIndex++
+		(*currIndex)++
 		return Expression{
 			Type:  "Number",
 			Value: token.Value,
@@ -104,7 +105,7 @@ func walk(currIndex int, tokens []Token) Expression {
 	}
 
 	if token.Type == TRUE {
-		currIndex++
+		(*currIndex)++
 		return Expression{
 			Type:  "Boolean",
 			Value: true,
@@ -112,7 +113,7 @@ func walk(currIndex int, tokens []Token) Expression {
 	}
 
 	if token.Type == FALSE {
-		currIndex++
+		(*currIndex)++
 		return Expression{
 			Type:  "Boolean",
 			Value: false,
@@ -120,7 +121,7 @@ func walk(currIndex int, tokens []Token) Expression {
 	}
 
 	if token.Type == NULL {
-		currIndex++
+		(*currIndex)++
 		return Expression{
 			Type:  "Null",
 			Value: nil,
@@ -134,8 +135,8 @@ func Parse(tokens []Token) Ast {
 	if len(tokens) < 1 {
 		panic("JSON invalido! Tokens = 0")
 	}
-	currIndex := 0
 
+	currIndex := 0
 	body := []Expression{}
 	ast := Ast{
 		Type: "Program",
@@ -143,7 +144,7 @@ func Parse(tokens []Token) Ast {
 	}
 
 	for currIndex < len(tokens) {
-		ast.Body = append(ast.Body, walk(currIndex, tokens))
+		ast.Body = append(ast.Body, walk(&currIndex, tokens))
 		currIndex++
 	}
 
