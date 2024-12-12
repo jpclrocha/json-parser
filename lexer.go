@@ -80,13 +80,13 @@ func Lexer(input string) []Token {
 			continue
 		}
 
-		// Whitespace
+		// Checa se tem espacos em branco
 		if matched, _ := regexp.MatchString(`\s`, char); matched {
 			current++
 			continue
 		}
 
-		// Numbers
+		// Checa se eh numero e pega o numero inteiro ex: 101, vai identificar o 1 loopar ate o final do numero, formando 101
 		if matched, _ := regexp.MatchString(`[0-9]`, char); matched {
 			value := ""
 			for current < len(input) && matched {
@@ -113,7 +113,7 @@ func Lexer(input string) []Token {
 			continue
 		}
 
-		// Keywords: true, false, null
+		// chechar se eh true, false ou null
 		if current+3 < len(input) {
 			substr := input[current : current+4]
 			switch substr {
@@ -134,7 +134,7 @@ func Lexer(input string) []Token {
 			}
 		}
 
-		panic(fmt.Sprintf("Unknown character: %s", char))
+		panic(fmt.Sprintf("Nao conheco esse caractere: %s", char))
 	}
 
 	return tokens
