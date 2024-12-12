@@ -5,123 +5,137 @@ import (
 	"regexp"
 )
 
+type TokenType string
+
 const (
-	LEFT_BRACE    = "LEFT_BRACE"
-	RIGHT_BRACE   = "RIGHT_BRACE"
-	LEFT_BRACKET  = "LEFT_BRACKET"
-	RIGHT_BRACKET = "RIGHT_BRACKET"
-	COLON         = "COLON"
-	COMMA         = "COMMA"
-	STRING        = "STRING"
-	NUMBER        = "NUMBER"
-	TRUE          = "TRUE"
-	FALSE         = "FALSE"
-	NULL          = "NULL"
+	LEFT_BRACE    TokenType = "LEFT_BRACE"
+	RIGHT_BRACE   TokenType = "RIGHT_BRACE"
+	LEFT_BRACKET  TokenType = "LEFT_BRACKET"
+	RIGHT_BRACKET TokenType = "RIGHT_BRACKET"
+	COLON         TokenType = "COLON"
+	COMMA         TokenType = "COMMA"
+	STRING        TokenType = "STRING"
+	NUMBER        TokenType = "NUMBER"
+	TRUE          TokenType = "TRUE"
+	FALSE         TokenType = "FALSE"
+	NULL          TokenType = "NULL"
 )
 
 type Token struct {
+	Type  TokenType
+	Value interface{}
+}
+
+type Node struct {
+	Type       string
+	Properties []Property
+	Elements   []interface{}
+	Value      interface{}
+}
+
+type Property struct {
 	Type  string
-	Value *string
+	Key   Token
+	Value interface{}
+}
+
+func createToken(tokenType TokenType, value ...interface{}) Token {
+	if len(value) > 0 {
+		return Token{Type: tokenType, Value: value[0]}
+	}
+	return Token{Type: tokenType}
 }
 
 func Lexer(input string) []Token {
-	currIndex := 0
 	tokens := []Token{}
+	current := 0
 
-	for currIndex < len(input) {
-		char := string(input[currIndex])
+	for current < len(input) {
+		char := string(input[current])
 
 		switch char {
 		case "{":
-			tokens = append(tokens, createToken(LEFT_BRACE, nil))
-			currIndex++
+			tokens = append(tokens, createToken(LEFT_BRACE))
+			current++
 			continue
 		case "}":
-			tokens = append(tokens, createToken(RIGHT_BRACE, nil))
-			currIndex++
+			tokens = append(tokens, createToken(RIGHT_BRACE))
+			current++
 			continue
 		case "[":
-			tokens = append(tokens, createToken(LEFT_BRACKET, nil))
-			currIndex++
+			tokens = append(tokens, createToken(LEFT_BRACKET))
+			current++
 			continue
 		case "]":
-			tokens = append(tokens, createToken(RIGHT_BRACKET, nil))
-			currIndex++
+			tokens = append(tokens, createToken(RIGHT_BRACKET))
+			current++
 			continue
 		case ":":
-			tokens = append(tokens, createToken(COLON, nil))
-			currIndex++
+			tokens = append(tokens, createToken(COLON))
+			current++
 			continue
 		case ",":
-			tokens = append(tokens, createToken(COMMA, nil))
-			currIndex++
+			tokens = append(tokens, createToken(COMMA))
+			current++
 			continue
-
-		// TESTANDO TODAS AS POSSIBILIDADES DE SER VAZIO -> " ", \t, \n \r \f \v
-		case " ", "\t", "\n", "\r", "\f", "\v":
-			currIndex++
-			continue
-		case `"`:
-			value := ""
-			currIndex++
-			char := string(input[currIndex])
-			for char != `"` {
-				value += char
-				currIndex++
-				char = string(input[currIndex])
-			}
-			currIndex++
-			tokens = append(tokens, createToken(STRING, &value))
-			continue
-
-		case "t":
-			if string(input[currIndex+1]) == "r" && string(input[currIndex+2]) == "u" && string(input[currIndex+3]) == "e" {
-				tokens = append(tokens, createToken(TRUE, nil))
-				currIndex += 4
-				continue
-			}
-
-		case "f":
-			if string(input[currIndex+1]) == "a" && string(input[currIndex+2]) == "l" && string(input[currIndex+3]) == "s" && string(input[currIndex+4]) == "e" {
-				tokens = append(tokens, createToken(FALSE, nil))
-				currIndex += 5
-				continue
-			}
-
-		case "n":
-			if string(input[currIndex+1]) == "u" && string(input[currIndex+2]) == "l" && string(input[currIndex+3]) == "l" {
-				tokens = append(tokens, createToken(NULL, nil))
-				currIndex += 4
-				continue
-			}
 		}
 
-		if regexp.MustCompile("[0-9]").MatchString(char) {
-			value := ""
+		// Whitespace
+		if matched, _ := regexp.MatchString(`\s`, char); matched {
+			current++
+			continue
+		}
 
-			for {
-				fmt.Print(value)
-				fmt.Print(value)
-				if regexp.MustCompile("[0-9]").MatchString(char) {
-					value += char
-					currIndex++
+		// Numbers
+		if matched, _ := regexp.MatchString(`[0-9]`, char); matched {
+			value := ""
+			for current < len(input) && matched {
+				value += string(input[current])
+				current++
+				if current < len(input) {
+					matched, _ = regexp.MatchString(`[0-9]`, string(input[current]))
 				}
-				break
 			}
-			tokens = append(tokens, createToken(NUMBER, &value))
+			tokens = append(tokens, createToken(NUMBER, value))
 			continue
 		}
 
-		panicString := fmt.Sprintf("Caracter invalido: %s", char)
-		panic(panicString)
+		// Strings
+		if char == "\"" {
+			current++
+			value := ""
+			for current < len(input) && string(input[current]) != "\"" {
+				value += string(input[current])
+				current++
+			}
+			tokens = append(tokens, createToken(STRING, value))
+			current++
+			continue
+		}
+
+		// Keywords: true, false, null
+		if current+3 < len(input) {
+			substr := input[current : current+4]
+			switch substr {
+			case "true":
+				tokens = append(tokens, createToken(TRUE))
+				current += 4
+				continue
+			case "fals":
+				if current+4 < len(input) && input[current+4] == 'e' {
+					tokens = append(tokens, createToken(FALSE))
+					current += 5
+					continue
+				}
+			case "null":
+				tokens = append(tokens, createToken(NULL))
+				current += 4
+				continue
+			}
+		}
+
+		panic(fmt.Sprintf("Unknown character: %s", char))
 	}
 
 	return tokens
-}
-
-func createToken(tokenType string, value *string) Token {
-	return Token{
-		Type:  tokenType,
-		Value: value,
-	}
 }

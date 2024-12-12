@@ -1,151 +1,128 @@
 package main
 
-type Property struct {
-	Type  string
-	Key   any
-	Value any
-}
+import "fmt"
 
-type Element struct {
-	Type  string
-	Value *any
-}
-type Expression struct {
-	Type       string
-	Properties *[]Property
-	Elements   *[]Element
-	Value      any
-}
+func Parser(tokens []Token) Node {
+	if len(tokens) < 1 {
+		panicStr := fmt.Sprintf("Quantidade de tokens invalido! Tokens totais: %d", len(tokens))
+		panic(panicStr)
+	}
+	current := 0
 
-type Ast struct {
-	Type string
-	Body []Expression
-}
+	var walk func() interface{}
+	walk = func() interface{} {
+		token := tokens[current]
 
-func walk(currIndex *int, tokens []Token) Expression {
-	token := tokens[*currIndex]
-	(*currIndex)++
+		switch token.Type {
+		case LEFT_BRACE:
+			current++
+			node := Node{
+				Type:       "ObjectExpression",
+				Properties: []Property{},
+			}
 
-	if token.Type == LEFT_BRACE {
-		(*currIndex)++
-		token = tokens[*currIndex]
+			for tokens[current].Type != RIGHT_BRACE {
+				// Verify key is a string
+				if tokens[current].Type != STRING {
+					panic("Object keys must be strings")
+				}
 
-		properties := []Property{}
-		node := Expression{
-			Type:       "Object",
-			Properties: &properties,
-		}
+				property := Property{
+					Type: "Property",
+					Key:  tokens[current],
+				}
+				current++
 
-		for token.Type != RIGHT_BRACE {
-			property := Property{
-				Type:  "Property",
-				Key:   token,
+				// Expect colon
+				if tokens[current].Type != COLON {
+					panic("Expected ':' after object key")
+				}
+				current++
+
+				property.Value = walk()
+				node.Properties = append(node.Properties, property)
+
+				// Check for valid comma placement
+				if tokens[current].Type == COMMA {
+					current++
+					// Ensure not a trailing comma
+					if tokens[current].Type == RIGHT_BRACE {
+						panic("Trailing comma is not allowed in JSON")
+					}
+				}
+			}
+			current++
+			return node
+
+		case LEFT_BRACKET:
+			current++
+			node := Node{
+				Type:     "ArrayExpression",
+				Elements: []interface{}{},
+			}
+
+			for tokens[current].Type != RIGHT_BRACKET {
+				node.Elements = append(node.Elements, walk())
+
+				// Check for valid comma placement
+				if tokens[current].Type == COMMA {
+					current++
+					// Ensure not a trailing comma
+					if tokens[current].Type == RIGHT_BRACKET {
+						panic("Trailing comma is not allowed in JSON")
+					}
+				}
+			}
+			current++
+			return node
+
+		case STRING:
+			current++
+			return Node{
+				Type:  "StringLiteral",
+				Value: token.Value,
+			}
+
+		case NUMBER:
+			current++
+			return Node{
+				Type:  "NumberLiteral",
+				Value: token.Value,
+			}
+
+		case TRUE:
+			current++
+			return Node{
+				Type:  "BooleanLiteral",
+				Value: true,
+			}
+
+		case FALSE:
+			current++
+			return Node{
+				Type:  "BooleanLiteral",
+				Value: false,
+			}
+
+		case NULL:
+			current++
+			return Node{
+				Type:  "NullLiteral",
 				Value: nil,
 			}
 
-			(*currIndex)++
-			token = tokens[*currIndex]
-
-			property.Value = walk(currIndex, tokens)
-			*node.Properties = append(*node.Properties, property)
-
-			token = tokens[*currIndex]
-			if token.Type == COMMA {
-				(*currIndex)++
-				token = tokens[*currIndex]
-			}
-		}
-		(*currIndex)++
-		return node
-	}
-	if token.Type == RIGHT_BRACE {
-		(*currIndex)++
-		properties := []Property{}
-		return Expression{
-			Type:       "Object",
-			Properties: &properties,
-		}
-	}
-	if token.Type == LEFT_BRACKET {
-		(*currIndex)++
-		token = tokens[*currIndex]
-
-		elements := []Element{}
-
-		node := Expression{
-			Type:     "Array",
-			Elements: &elements,
-		}
-
-		for token.Type != RIGHT_BRACKET {
-			*node.Elements = append(*node.Elements, *walk(currIndex, tokens).Elements...)
-			token = tokens[*currIndex]
-
-			if token.Type == COMMA {
-				(*currIndex)++
-				token = tokens[*currIndex]
-			}
-		}
-		(*currIndex)++
-		return node
-	}
-	if token.Type == STRING {
-		(*currIndex)++
-		return Expression{
-			Type:  "String",
-			Value: token.Value,
-		}
-	}
-	if token.Type == NUMBER {
-		(*currIndex)++
-		return Expression{
-			Type:  "Number",
-			Value: token.Value,
+		default:
+			panic(fmt.Sprintf("Unexpected token type: %v", token.Type))
 		}
 	}
 
-	if token.Type == TRUE {
-		(*currIndex)++
-		return Expression{
-			Type:  "Boolean",
-			Value: true,
-		}
+	ast := Node{
+		Type:     "Program",
+		Elements: []interface{}{},
 	}
 
-	if token.Type == FALSE {
-		(*currIndex)++
-		return Expression{
-			Type:  "Boolean",
-			Value: false,
-		}
-	}
-
-	if token.Type == NULL {
-		(*currIndex)++
-		return Expression{
-			Type:  "Null",
-			Value: nil,
-		}
-	}
-
-	panic(token.Type)
-}
-
-func Parse(tokens []Token) Ast {
-	if len(tokens) < 1 {
-		panic("JSON invalido! Tokens = 0")
-	}
-
-	currIndex := 0
-	body := []Expression{}
-	ast := Ast{
-		Type: "Program",
-		Body: body,
-	}
-
-	for currIndex < len(tokens) {
-		ast.Body = append(ast.Body, walk(&currIndex, tokens))
-		currIndex++
+	for current < len(tokens) {
+		ast.Elements = append(ast.Elements, walk())
 	}
 
 	return ast
