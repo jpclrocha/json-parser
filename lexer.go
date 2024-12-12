@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 )
 
@@ -134,7 +135,9 @@ func Lexer(input string) []Token {
 			}
 		}
 
-		panic(fmt.Sprintf("Nao conheco esse caractere: %s", char))
+		// panic(fmt.Sprintf("Nao conheco esse caractere: %s", char))
+		fmt.Printf("Nao conheco esse caractere: %s\n", char)
+		os.Exit(1)
 	}
 
 	return tokens

@@ -1,11 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 func Parser(tokens []Token) Node {
 	if len(tokens) < 1 {
-		panicStr := fmt.Sprintf("Quantidade de tokens invalido! Tokens totais: %d", len(tokens))
-		panic(panicStr)
+		// panicStr := fmt.Sprintf("Quantidade de tokens invalido! Tokens totais: %d", len(tokens))
+		// panic(panicStr)
+		fmt.Printf("Quantidade de tokens invalido! Tokens totais: %d\n", len(tokens))
+		os.Exit(1)
 	}
 	current := 0
 
@@ -23,7 +28,9 @@ func Parser(tokens []Token) Node {
 
 			for tokens[current].Type != RIGHT_BRACE {
 				if tokens[current].Type != STRING {
-					panic("As chaves do JSON precisam ser textos!")
+					// panic("As chaves do JSON precisam ser textos!")
+					fmt.Println("As chaves do JSON precisam ser textos!")
+					os.Exit(1)
 				}
 
 				property := Property{
@@ -34,7 +41,9 @@ func Parser(tokens []Token) Node {
 
 				// Expect colon
 				if tokens[current].Type != COLON {
-					panic("Dois pontos (:) eh necessario depois de uma chave dentro de um objeto!")
+					// panic("Dois pontos (:) eh necessario depois de uma chave dentro de um objeto!")
+					fmt.Println("Dois pontos (:) eh necessario depois de uma chave dentro de um objeto!")
+					os.Exit(1)
 				}
 				current++
 
@@ -46,7 +55,9 @@ func Parser(tokens []Token) Node {
 					current++
 					// Nao pode ser uma virgula antes do final do objeto ex: {"chave":"valor",}
 					if tokens[current].Type == RIGHT_BRACE {
-						panic("Virgula nao eh permitida no final de um objeto!")
+						// panic("Virgula nao eh permitida no final de um objeto!")
+						fmt.Println("Virgula nao eh permitida no final de um objeto!")
+						os.Exit(1)
 					}
 				}
 			}
@@ -68,7 +79,9 @@ func Parser(tokens []Token) Node {
 					current++
 					// Nao pode ser uma virgula antes do final da array ex: [{"chave":"valor"},]
 					if tokens[current].Type == RIGHT_BRACKET {
-						panic("Virgula nao eh permitida no final de uma array!")
+						// panic("Virgula nao eh permitida no final de uma array!")
+						fmt.Println("Virgula nao eh permitida no final de uma array!")
+						os.Exit(1)
 					}
 				}
 			}
@@ -111,7 +124,10 @@ func Parser(tokens []Token) Node {
 			}
 
 		default:
-			panic(fmt.Sprintf("Token nao esperado: %v", token.Type))
+			// panic(fmt.Sprintf("Token nao esperado: %v", token.Type))
+			fmt.Printf("Token nao esperado: %v\n", token.Type)
+			os.Exit(1)
+			return nil
 		}
 	}
 
