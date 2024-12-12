@@ -101,10 +101,10 @@ func Lexer(input string) []Token {
 		}
 
 		// Strings
-		if char == "\"" {
+		if char == `"` {
 			current++
 			value := ""
-			for current < len(input) && string(input[current]) != "\"" {
+			for current < len(input) && string(input[current]) != `"` {
 				value += string(input[current])
 				current++
 			}
@@ -115,8 +115,8 @@ func Lexer(input string) []Token {
 
 		// chechar se eh true, false ou null
 		if current+3 < len(input) {
-			substr := input[current : current+4]
-			switch substr {
+			text := input[current : current+4]
+			switch text {
 			case "true":
 				tokens = append(tokens, createToken(TRUE))
 				current += 4

@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	input, err := os.ReadFile("../tests/step1/invalid.json")
+	input, err := os.ReadFile("./tests/step1/invalid.json")
 	if err != nil {
 		panic(err)
 	}
